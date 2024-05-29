@@ -6,12 +6,14 @@ const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
   const apiKey = KEY;
-  const [data, setData] = useState([]); // Initialize as an empty array
+  const [data, setData] = useState([]);
   const [input, setinput] = useState("");
   const [value, setValue] = useState("");
   const [isClicked, setIsClicked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [nextPageToken, setNextPageToken] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
 
   const searchInput = (e) => {
     setinput(e.target.value);
@@ -21,44 +23,42 @@ export const DataProvider = ({ children }) => {
     setIsClicked(true);
     setValue(input);
   };
-  // executes on pageLoad
+
   useEffect(() => {
-    setValue("latest");
+    fetchLatestVideos();
+  }, []);
+
+  const fetchLatestVideos = (pageNumber = 1) => {
     setIsLoading(true);
+    const startIndex = (pageNumber - 1) * 10;
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=latest&maxResults=10&key=${apiKey}&startIndex=${startIndex}`;
+
     axios
-      .get(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${value}&maxResults=10&key=${apiKey}`
-      )
+      .get(url)
       .then((response) => {
         setData(response.data.items);
+        setNextPageToken(response.data.nextPageToken || null);
+        setTotalResults(response.data.pageInfo.totalResults);
         setIsLoading(false);
-        setIsClicked(false);
       })
       .catch((error) => {
         console.error("Error fetching data:", error);
         setIsLoading(false);
-        setIsClicked(false);
       });
-  }, []);
-  // Executes on every search
+  };
+
   useEffect(() => {
-    if (apiKey === "") {
-      alert("API key is not defined. Please provide a valid API key.");
-      return;
-    }
-    if (isClicked === true) {
+    if (isClicked) {
       setIsLoading(true);
+      const startIndex = (currentPage - 1) * 10;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${value}&maxResults=10&key=${apiKey}&startIndex=${startIndex}`;
+
       axios
-        .get(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${value}&maxResults=10&key=${apiKey}&pageToken=${
-            currentPage > 1 ? data.nextPageToken : ""
-          }`
-        )
+        .get(url)
         .then((response) => {
-          setData((prevData) => ({
-            ...response.data,
-            items: [...prevData.items, ...response.data.items],
-          }));
+          setData(response.data.items);
+          setNextPageToken(response.data.nextPageToken || null);
+          setTotalResults(response.data.pageInfo.totalResults);
           setIsLoading(false);
           setIsClicked(false);
         })
@@ -68,10 +68,19 @@ export const DataProvider = ({ children }) => {
           setIsClicked(false);
         });
     }
-  }, [value, currentPage]);
-  const handleLoadMore = () => {
-    setCurrentPage((prevPage) => prevPage + 1);
+  }, [value, isClicked, currentPage]);
+
+  const fetchNextPage = () => {
+    if (nextPageToken) {
+      fetchLatestVideos(nextPageToken);
+    }
   };
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    fetchLatestVideos(pageNumber); // Call fetchLatestVideos with the new page number
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -80,7 +89,10 @@ export const DataProvider = ({ children }) => {
         searchInput,
         handleSearch,
         value,
-        handleLoadMore,
+        fetchNextPage,
+        currentPage,
+        handlePageChange,
+        totalResults,
       }}>
       {children}
     </DataContext.Provider>

@@ -21,10 +21,9 @@ const NavBar = () => {
           <Nav className="me-auto nav-container">
             <span className="left">
               {/* <Navbar.Brand href="#home">Video-Theatre</Navbar.Brand> */}
-
               <Nav.Link href="#" className="logo">
                 <i className="bi bi-youtube" />
-                <h1>YouTube</h1>
+                <h1>YouTube Clone</h1>
               </Nav.Link>
             </span>
             <div className="search">
@@ -48,6 +47,9 @@ const NavBar = () => {
               </div>
             </div>
             <span className="right">
+              <Nav.Link href="https://github.com/NqobileRSA">
+                <i className={`bi bi-github btn btn-${theme}`} />
+              </Nav.Link>
               <Theme />
             </span>
           </Nav>
